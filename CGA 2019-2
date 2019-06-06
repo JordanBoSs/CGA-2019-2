@@ -1,0 +1,1409 @@
+//glew include
+#include <GL/glew.h>
+
+//std includes
+#include <string>
+#include <iostream>
+using namespace std;
+
+//glfw include
+#include <GLFW/glfw3.h>
+
+// program include
+#include "Headers/InputManager.h"
+#include "Headers/TimeManager.h"
+#include "Headers/Shader.h"
+
+// Texture include
+#include "Headers/Texture.h"
+
+// Camera include
+#include "Headers/CameraFPS.h"
+
+#include "Headers/Model.h"
+
+// Sphere include
+#include "Headers/Sphere.h"
+
+#include "Headers\collision.h"
+
+// OpenAL include
+#include <AL/alut.h>
+
+#define NUM_BUFFERS 7
+#define NUM_SOURCES 7
+#define NUM_ENVIRONMENTS 1
+
+Sphere sp(1.0, 50, 50, MODEL_MODE::VERTEX_COLOR);
+Sphere sp2(1.0, 50, 50, MODEL_MODE::VERTEX_LIGHT_TEXTURE);
+
+Shader lightingShader;
+Shader lampShader;
+Shader particlesShader;
+
+Model modelo1, modelo2, modelo3;
+Model modelo4, modelo5, modelo6;
+Model modelo231;
+Model modeloEstadio;
+
+std::vector<GLuint> rays;
+
+Texture textureDifuse(GL_TEXTURE_2D, "../Textures/container2.png");
+Texture textureSpecular(GL_TEXTURE_2D, "../Textures/container2_specular.png");
+Texture textureParticle(GL_TEXTURE_2D, "../Textures/hoja.png");
+Texture textureParticle2(GL_TEXTURE_2D, "../Textures/flama.png");
+
+GLuint VAO, VBO, EBO;
+GLuint VAOParticles;
+GLuint nParticles;
+GLuint initVel, startTime;
+
+int prueba = 0;
+int vidaBulbasaur = 100;
+int vidaIvysaur = 100;
+int vidaVenusaur = 100;
+int vidaCharmander = 100;
+int vidaCharmeleon = 100;
+int vidaCharizard = 100;
+
+int poderAtaque = 0;
+int ataque;
+int recibe;
+
+bool paraZ = 0;
+bool parax = 0;
+bool parac = 0;
+bool parav = 0;
+bool parab = 0;
+bool paran = 0;
+
+bool colisionan = 0;
+
+int screenWidth;
+int screenHeight;
+int varPk;
+float varMov1X, varMov1Y, varMov1Z;
+float varMov2X, varMov2Y, varMov2Z;
+float varMov3X, varMov3Y, varMov3Z;
+float varMov4X, varMov4Y, varMov4Z;
+float varMov5X, varMov5Y, varMov5Z;
+float varMov6X, varMov6Y, varMov6Z;
+float varMov231X, varMov231Y, varMov231Z;
+float varRot231X, varRot231Y, varRot231Z;
+float velocidad = 8.0f;
+bool pkAct1 = true, pkAct2, pkAct3, pkAct4 = true, pkAct5, pkAct6;
+bool movBulbasaur, movIvysaur, movVenusaur, movCharmander, movCharmeleon, movCharizard, movPhanpy1 = true, movPhanpy2 = false, movPhanpy3 = false;
+bool inter36;
+
+//para los ataques con particulas
+bool hojasNavaja = false;
+bool lanzaLlamas = false;
+
+GLFWwindow * window;
+InputManager inputManager;
+float deltaTime, Time;
+
+// OpenAL config
+ALfloat listenerPos[] = { 0.0, 0.0, 4.0 };
+ALfloat listenerVel[] = { 0.0, 0.0, 0.0 };
+ALfloat listenerOri[] = { 0.0, 0.0, 1.0, 0.0, 1.0, 0.0 };
+
+ALfloat source0Pos[] = { 0.0, 0.0, -5.0 };
+ALfloat source0Vel[] = { 0.0, 0.0, 0.0 };
+
+ALfloat source1Pos[] = { 0.0, 0.0, 5.0 };
+ALfloat source1Vel[] = { 0.0, 0.0, 0.0 };
+
+ALfloat source2Pos[] = { 0.0, 0.0, 0.0 };
+ALfloat source2Vel[] = { 0.0, 0.0, 0.0 };
+
+ALuint buffer[NUM_BUFFERS];
+ALuint source[NUM_SOURCES];
+ALuint environment[NUM_ENVIRONMENTS];
+
+ALsizei size, freq;
+ALenum format;
+ALvoid *data;
+int ch;
+ALboolean loop;
+
+// Se definen todos las funciones.
+void reshapeCallback(GLFWwindow* Window, int widthRes, int heightRes);
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
+void mouseCallback(GLFWwindow* window, double xpos, double ypos);
+void mouseButtonCallback(GLFWwindow* window, int button, int state, int mod);
+void init(int width, int height, std::string strTitle, bool bFullScreen);
+void destroyWindow();
+void destroy();
+bool processInput(bool continueApplication = true);
+
+// Implementacion de todas las funciones.
+void funcionVida(bool btn1, bool btn2, int inicial, bool decide, int ataca, int vidaAtaca, int recibe, int vidaRecibe, char ataque[100]) {
+	
+	std::string nombreAtaca;
+	std::string nombreRecibe;
+
+	prueba = inicial;
+	if (decide && (btn1 || btn2)) {
+		prueba++;
+		if (prueba == 1) {
+			vidaRecibe = vidaRecibe - poderAtaque;
+			switch (ataca) {
+			case 1:
+				nombreAtaca = "Bulbasaur";
+				break;
+			case 2:
+				nombreAtaca = "Ivysaur";
+				break;
+			case 3:
+				nombreAtaca = "Venusaur";
+				break;
+			case 4:
+				nombreAtaca = "Charmander";
+				break;
+			case 5:
+				nombreAtaca = "Charmeleon";
+				break;
+			case 6:
+				nombreAtaca = "Charizard";
+				break;
+			}
+			switch (recibe) {
+			case 1:
+				nombreRecibe = "Bulbasaur";
+				vidaBulbasaur = vidaRecibe;
+				break;
+			case 2:
+				nombreRecibe = "Ivysaur";
+				vidaIvysaur = vidaRecibe;
+				break;
+			case 3:
+				nombreRecibe = "Venusaur";
+				vidaVenusaur = vidaRecibe;
+				break;
+			case 4:
+				nombreRecibe = "Charmander";
+				vidaCharmander = vidaRecibe;
+				break;
+			case 5:
+				nombreRecibe = "Charmeleon";
+				vidaCharmeleon = vidaRecibe;
+				break;
+			case 6:
+				nombreRecibe = "Charizard";
+				vidaCharizard = vidaRecibe;
+				break;
+			}
+			std::cout << nombreAtaca << " uso " << ataque << " en " << nombreRecibe << std::endl;
+			std::cout << "Vida de " << nombreRecibe << " disminuye " << vidaRecibe << std::endl;
+		}
+
+	}
+
+}
+
+void funcionTextoColision(bool btn1, bool btn2, int inicial, bool decide, char texto[100])
+{
+	prueba = inicial;
+	if (decide && (btn1 || btn2)) {
+		prueba++;
+		if (prueba == 1) {
+			std::cout << texto << prueba << std::endl;
+
+		}
+	}
+}
+/**/
+void initParticleBuffers() {
+	nParticles = 400;
+	// Generate the buffers
+	glGenBuffers(1, &initVel);   // Initial velocity buffer
+	glGenBuffers(1, &startTime); // Start time buffer
+
+	// Allocate space for all buffers
+	int size = nParticles * 5 * sizeof(float);
+	glBindBuffer(GL_ARRAY_BUFFER, initVel);
+	glBufferData(GL_ARRAY_BUFFER, size, NULL, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, startTime);
+	glBufferData(GL_ARRAY_BUFFER, nParticles * sizeof(float), NULL, GL_STATIC_DRAW);
+
+	// Fill the first velocity buffer with random velocities
+	glm::vec3 v(0.0f);
+	float velocity, theta, phi;
+	GLfloat *data = new GLfloat[nParticles * 3];
+	for (unsigned int i = 0; i < nParticles; i++) {
+
+		theta = glm::mix(1.0f, glm::pi<float>() / 6.0f, ((float)rand() / RAND_MAX));
+		phi = glm::mix(1.0f, glm::two_pi<float>(), ((float)rand() / RAND_MAX));
+
+		v.x = sinf(theta * 10) * cosf(phi * 80);
+		v.y = cosf(theta * 10);
+		v.z = sinf(theta) * sinf(phi);
+
+		velocity = glm::mix(0.25f, 1.25f, ((float)rand() / RAND_MAX));
+		v = glm::normalize(v) * velocity;
+
+		data[3 * i] = v.x;
+		data[3 * i + 1] = v.y;
+		data[3 * i + 2] = v.z;
+	}
+	glBindBuffer(GL_ARRAY_BUFFER, initVel);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, size, data);
+
+		// Fill the start time buffer
+		delete[] data;
+		data = new GLfloat[nParticles];
+		//float time2 = 0.0f;
+		float time2 = 60.0f;
+		float rate = 0.00075f;
+		for (unsigned int i = 0; i < nParticles; i++) {
+			data[i] = time2;
+			time2 += rate;
+		}
+
+		glBindBuffer(GL_ARRAY_BUFFER, startTime);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, nParticles * sizeof(float), data);
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		delete[] data;
+
+		glGenVertexArrays(1, &VAOParticles);
+		glBindVertexArray(VAOParticles);
+		glBindBuffer(GL_ARRAY_BUFFER, initVel);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+		glEnableVertexAttribArray(0);
+
+		glBindBuffer(GL_ARRAY_BUFFER, startTime);
+		glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 0, NULL);
+		glEnableVertexAttribArray(1);
+
+	glBindVertexArray(0);
+}//*/
+
+void init(int width, int height, std::string strTitle, bool bFullScreen) {
+
+	if (!glfwInit()) {
+		std::cerr << "Failed to initialize GLFW" << std::endl;
+		exit(-1);
+	}
+	screenWidth = width;
+	screenHeight = height;
+
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+	if (bFullScreen)
+		window = glfwCreateWindow(width, height, strTitle.c_str(),
+			glfwGetPrimaryMonitor(), nullptr);
+	else
+		window = glfwCreateWindow(width, height, strTitle.c_str(), nullptr,
+			nullptr);
+
+	if (window == nullptr) {
+		std::cerr
+			<< "Error to create GLFW window, you can try download the last version of your video card that support OpenGL 3.3+"
+			<< std::endl;
+		destroyWindow();
+		exit(-1);
+	}
+
+	glfwMakeContextCurrent(window);
+	glfwSwapInterval(0);
+
+	glfwSetWindowSizeCallback(window, reshapeCallback);
+	glfwSetWindowSizeCallback(window, reshapeCallback);
+	glfwSetKeyCallback(window, keyCallback);
+	glfwSetCursorPosCallback(window, mouseCallback);
+	glfwSetMouseButtonCallback(window, mouseButtonCallback);
+	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
+
+	// Init glew
+	glewExperimental = GL_TRUE;
+	GLenum err = glewInit();
+	if (GLEW_OK != err) {
+		std::cerr << "Failed to initialize glew" << std::endl;
+		exit(-1);
+	}
+
+	glViewport(0, 0, screenWidth, screenHeight);
+	glClearColor(0.255f, 0.0f, 0.255f, 0.0f);
+
+	// Enable test depth, must be clear depth buffer bit
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+
+	sp.init();
+	sp.load();
+	sp2.init();
+	sp2.load();
+
+	modelo1.loadModel("../objects/Bulbasaur/Bulbasaur.obj");
+	modelo2.loadModel("../objects/Ivysaur/Ivysaur.fbx");
+	modelo3.loadModel("../objects/Venusaur/Venusaur.obj");
+	modelo4.loadModel("../objects/Charmander/Charmander.obj");
+	modelo5.loadModel("../objects/Charmeleon/Charmeleon.fbx");
+	modelo6.loadModel("../objects/Charizard/Charizard.obj");
+	modelo231.loadModel("../objects/Phanpy/Phanpy3.fbx");
+	modeloEstadio.loadModel("../objects/Super Training Stadium/Stage.fbx");
+
+	lightingShader.initialize("../Shaders/loadModelLighting.vs", "../Shaders/loadModelLighting.fs");
+	lampShader.initialize("../Shaders/lampShader.vs", "../Shaders/lampShader.fs");
+	particlesShader.initialize("../Shaders/particles.vs", "../Shaders/particles.fs");
+
+	// OpenAL init
+	alutInit(0, NULL);
+
+	alListenerfv(AL_POSITION, listenerPos);
+	alListenerfv(AL_VELOCITY, listenerVel);
+	alListenerfv(AL_ORIENTATION, listenerOri);
+
+	alGetError(); // clear any error messages
+
+	if (alGetError() != AL_NO_ERROR) {
+		printf("- Error creating buffers !!\n");
+		exit(1);
+	}
+	else {
+		printf("init() - No errors yet.");
+	}
+	// Generate buffers, or else no sound will happen!
+	alGenBuffers(NUM_BUFFERS, buffer);
+
+	buffer[0] = alutCreateBufferFromFile("../sounds/bulbasaur-cry.wav");
+	buffer[1] = alutCreateBufferFromFile("../sounds/ivysaur-cry.wav");
+	buffer[2] = alutCreateBufferFromFile("../sounds/venusaur-cry.wav");
+	buffer[3] = alutCreateBufferFromFile("../sounds/charmanders-cry.wav");
+	buffer[4] = alutCreateBufferFromFile("../sounds/charmeleon-cry.wav");
+	buffer[5] = alutCreateBufferFromFile("../sounds/charizards-cry.wav");
+	buffer[6] = alutCreateBufferFromFile("../sounds/route1.wav");
+
+	//buffer[0] = alutCreateBufferHelloWorld();
+
+	alGetError(); /* clear error */
+	alGenSources(NUM_SOURCES, source);
+
+	if (alGetError() != AL_NO_ERROR) {
+		printf("- Error creating sources !!\n");
+		exit(2);
+	}
+	else {
+		printf("init - no errors after alGenSources\n");
+	}
+
+	alSourcef(source[0], AL_PITCH, 1.0f);
+	alSourcef(source[0], AL_GAIN, 0.3f);
+	alSourcefv(source[0], AL_POSITION, source0Pos);
+	alSourcefv(source[0], AL_VELOCITY, source0Vel);
+	alSourcei(source[0], AL_BUFFER, buffer[0]);
+	alSourcei(source[0], AL_LOOPING, AL_FALSE);
+	alSourcef(source[0], AL_MAX_DISTANCE, 100);
+
+	alSourcef(source[1], AL_PITCH, 1.0f);
+	alSourcef(source[1], AL_GAIN, 1.0f);
+	alSourcefv(source[1], AL_POSITION, source0Pos);
+	alSourcefv(source[1], AL_VELOCITY, source0Vel);
+	alSourcei(source[1], AL_BUFFER, buffer[1]);
+	alSourcei(source[1], AL_LOOPING, AL_FALSE);
+	alSourcef(source[1], AL_MAX_DISTANCE, 100);
+
+	alSourcef(source[2], AL_PITCH, 1.0f);
+	alSourcef(source[2], AL_GAIN, 1.0f);
+	alSourcefv(source[2], AL_POSITION, source0Pos);
+	alSourcefv(source[2], AL_VELOCITY, source0Vel);
+	alSourcei(source[2], AL_BUFFER, buffer[2]);
+	alSourcei(source[2], AL_LOOPING, AL_FALSE);
+	alSourcef(source[2], AL_MAX_DISTANCE, 100);
+
+	alSourcef(source[3], AL_PITCH, 1.0f);
+	alSourcef(source[3], AL_GAIN, 0.3f);
+	alSourcefv(source[3], AL_POSITION, source1Pos);
+	alSourcefv(source[3], AL_VELOCITY, source1Vel);
+	alSourcei(source[3], AL_BUFFER, buffer[3]);
+	alSourcei(source[3], AL_LOOPING, AL_FALSE);
+	alSourcef(source[3], AL_MAX_DISTANCE, 100);
+
+	alSourcef(source[4], AL_PITCH, 1.0f);
+	alSourcef(source[4], AL_GAIN, 1.0f);
+	alSourcefv(source[4], AL_POSITION, source1Pos);
+	alSourcefv(source[4], AL_VELOCITY, source1Vel);
+	alSourcei(source[4], AL_BUFFER, buffer[4]);
+	alSourcei(source[4], AL_LOOPING, AL_FALSE);
+	alSourcef(source[4], AL_MAX_DISTANCE, 100);
+
+	alSourcef(source[5], AL_PITCH, 1.0f);
+	alSourcef(source[5], AL_GAIN, 0.3f);
+	alSourcefv(source[5], AL_POSITION, source1Pos);
+	alSourcefv(source[5], AL_VELOCITY, source1Vel);
+	alSourcei(source[5], AL_BUFFER, buffer[5]);
+	alSourcei(source[5], AL_LOOPING, AL_FALSE);
+	alSourcef(source[5], AL_MAX_DISTANCE, 100);
+
+	alSourcef(source[6], AL_PITCH, 1.0f);
+	alSourcef(source[6], AL_GAIN, 0.4f);
+	alSourcefv(source[6], AL_POSITION, source2Pos);
+	alSourcefv(source[6], AL_VELOCITY, source2Vel);
+	alSourcei(source[6], AL_BUFFER, buffer[6]);
+	alSourcei(source[6], AL_LOOPING, AL_TRUE);
+	alSourcef(source[6], AL_MAX_DISTANCE, 100);
+
+	textureParticle.load();
+	textureParticle2.load();
+	initParticleBuffers();
+
+}
+
+void destroyWindow() {
+	glfwDestroyWindow(window);
+	glfwTerminate();
+}
+
+void destroy() {
+	destroyWindow();
+	lightingShader.destroy();
+	lampShader.destroy();
+}
+
+void reshapeCallback(GLFWwindow* Window, int widthRes, int heightRes) {
+	screenWidth = widthRes;
+	screenHeight = heightRes;
+	glViewport(0, 0, widthRes, heightRes);
+}
+
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mode) {
+	inputManager.keyPressed(inputManager.toApplicationKey(key), deltaTime * 10.0f,
+		inputManager.toApplicationState(action));
+}
+
+void mouseCallback(GLFWwindow* window, double xpos, double ypos) {
+	inputManager.mouseMoved(xpos, ypos);
+}
+
+void mouseButtonCallback(GLFWwindow* window, int button, int state, int mod) {
+	double xpos, ypos;
+	glfwGetCursorPos(window, &xpos, &ypos);
+	inputManager.mouseClicked(inputManager.toMouseButtonIndex(button), xpos,
+		ypos, inputManager.toApplicationState(state));
+}
+
+bool processInput(bool continueApplication) {//
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS
+		|| glfwWindowShouldClose(window) != 0) {
+		return false;
+	}
+	if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) {
+		varPk = 1;
+		//std::cout << "Bulbasaur yo te elijo" << std::endl;
+	}
+	if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
+		varPk = 2;
+		//std::cout << "Ivysaur yo te elijo" << std::endl;
+	}
+	if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) {
+		varPk = 3;
+		//std::cout << "Venusaur yo te elijo" << std::endl;
+	}
+	if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) {
+		varPk = 4;
+		//std::cout << "Charmander yo te elijo" << std::endl;
+	}
+	if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS) {
+		varPk = 5;
+		//std::cout << "Charmeleon yo te elijo" << std::endl;
+	}
+	if (glfwGetKey(window, GLFW_KEY_6) == GLFW_PRESS) {
+		varPk = 6;
+	}
+	if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) {
+		poderAtaque = 30;
+		movBulbasaur = true;
+		paraZ = 1;
+		ataque = 1;
+		hojasNavaja = false;
+	}
+	if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
+		poderAtaque = 30;
+		movIvysaur = true;
+		parax = 1;
+		ataque = 2;
+		hojasNavaja = false;
+	}
+	if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
+		poderAtaque = 30;
+		movVenusaur = true;
+		parac = 1;
+		ataque = 3;
+		hojasNavaja = false;
+	}
+	if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS) {
+		poderAtaque = 30;
+		movCharmander = true;
+		parav = 1;
+		ataque = 4;
+		lanzaLlamas = false;
+	}
+	if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS) {
+		poderAtaque = 30;
+		movCharmeleon = true;
+		parab = 1;
+		ataque = 5;
+		lanzaLlamas = false;
+	}
+	if (glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS) {
+		poderAtaque = 30;
+		movCharizard = true;
+		paran = 1;
+		ataque = 6;
+		lanzaLlamas = false;
+	}
+	if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
+		lanzaLlamas = true;
+	}
+	if (glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS) {
+		hojasNavaja = true;
+	
+	}
+	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+		alSourcePlay(source[6]);
+	}
+	TimeManager::Instance().CalculateFrameRate(true);
+	deltaTime = TimeManager::Instance().DeltaTime;
+	inputManager.do_movement(deltaTime);
+	glfwPollEvents();
+	return continueApplication;
+}
+
+void applicationLoop() {
+	bool psi = true;
+
+	glm::vec3 lightPos(0.0f, 5.0f, 0.0f);
+	double lastTime = TimeManager::Instance().GetTime();
+
+	SBB sbb1 = getSBB(modelo1.getMeshes());
+	SBB sbb2 = getSBB(modelo2.getMeshes());
+	SBB sbb3 = getSBB(modelo3.getMeshes());
+	SBB sbb4 = getSBB(modelo4.getMeshes());
+	SBB sbb5 = getSBB(modelo5.getMeshes());
+	SBB sbb6 = getSBB(modelo6.getMeshes());
+	SBB sbb231 = getSBB(modelo231.getMeshes());
+
+	while (psi) {
+		psi = processInput(true);
+		// This is new, need clear depth buffer bit
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		lightingShader.turnOn();
+
+		GLint viewPosLoc = lightingShader.getUniformLocation("viewPos");
+		glUniform3f(viewPosLoc, inputManager.getCameraFPS()->Position.x, inputManager.getCameraFPS()->Position.y,
+			inputManager.getCameraFPS()->Position.z);
+
+		// Set material properties
+		GLint matDiffuseLoc = lightingShader.getUniformLocation(
+			"material.diffuse");
+		GLint matSpecularLoc = lightingShader.getUniformLocation(
+			"material.specular");
+		GLint matShineLoc = lightingShader.getUniformLocation(
+			"material.shininess");
+		glUniform1i(matDiffuseLoc, 0);
+		glUniform1i(matSpecularLoc, 1);
+		glUniform1f(matShineLoc, 32.0f);
+
+		// Set lights properties
+		GLint lightAmbientLoc = lightingShader.getUniformLocation(
+			"light.ambient");
+		GLint lightDiffuseLoc = lightingShader.getUniformLocation(
+			"light.diffuse");
+		GLint lightSpecularLoc = lightingShader.getUniformLocation(
+			"light.specular");
+		GLint lightPosLoc = lightingShader.getUniformLocation("light.position");
+		glUniform3f(lightAmbientLoc, 0.5f, 0.5f, 0.5f);
+		glUniform3f(lightDiffuseLoc, 0.8f, 0.8f, 0.8f); // Let's darken the light a bit to fit the scene
+		glUniform3f(lightSpecularLoc, 1.0f, 1.0f, 1.0f);
+		glUniform3f(lightPosLoc, lightPos.x, lightPos.y, lightPos.z);
+
+		// Create camera transformations
+		glm::mat4 view = inputManager.getCameraFPS()->GetViewMatrix();
+		glm::mat4 projection = glm::perspective(45.0f, (float)screenWidth / (float)screenHeight, 0.1f, 100.0f);
+		// Get the uniform locations
+		GLint modelLoc = lightingShader.getUniformLocation("model");
+		GLint viewLoc = lightingShader.getUniformLocation("view");
+		GLint projLoc = lightingShader.getUniformLocation("projection");
+		// Pass the matrices to the shader
+		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+		/**--BULBASAUR--**/
+		glm::mat4 model1 = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f + varMov1X, 0.0f + varMov1Y, 5.0f - varMov1Z));//posicion
+		if (movBulbasaur && pkAct1)
+		{
+			if (varMov1Z > 10.0f)
+			{
+				movBulbasaur = false;
+			}
+			else if (varMov1Z < 5.0f)
+			{
+				varMov1Z += velocidad * deltaTime;
+				varMov1Y = pow((varMov1Z / 6.0f), 2.0f);
+				alSourcePlay(source[0]);
+			}
+			else if (varMov1Z >= 5.0f)
+			{
+				varMov1Z += velocidad * deltaTime;
+				varMov1Y = pow(((varMov1Z - 10.0f) / 6.0f), 2.0f);
+			}
+			if (!movBulbasaur)
+			{
+				varMov1X = 0.0f;
+				varMov1Y = 0.0f;
+				varMov1Z = 0.0f;
+			}
+		}
+		model1 = glm::rotate(model1, 180.0f * (3.14159f / 180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		model1 = glm::scale(model1, glm::vec3(0.1f, 0.1f, 0.1f)); //escala
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model1));
+		if (pkAct1)
+		{
+			modelo1.render(&lightingShader);
+		}
+			
+
+		/**--IVYSAUR--**/
+		glm::mat4 model2 = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f + varMov2X, 0.0f + varMov2Y, 5.0f - varMov2Z));//posicion
+		if (movIvysaur && pkAct2)
+		{
+			if (varMov2Z > 8.0f)
+			{
+				movIvysaur = false;
+			}
+			else if (varMov2Z < 4.0f)
+			{
+				varMov2Z += velocidad * deltaTime;
+				varMov2Y = pow((varMov2Z / 6.0f), 2.0f);
+				alSourcePlay(source[1]);
+			}
+			else if (varMov2Z >= 4.0f)
+			{
+				varMov2Z += velocidad * deltaTime;
+				varMov2Y = pow(((varMov2Z - 8.0f) / 6.0f), 2.0f);
+			}
+			if (!movIvysaur)
+			{
+				varMov2X = 0.0f;
+				varMov2Y = 0.0f;
+				varMov2Z = 0.0f;
+			}
+		}
+		model2 = glm::rotate(model2, -90.0f * (3.14159f / 180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+		model2 = glm::rotate(model2, 180.0f * (3.14159f / 180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		model2 = glm::scale(model2, glm::vec3(0.1f, 0.1f, 0.1f)); //escala
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model2));
+		if (pkAct2)
+			modelo2.render(&lightingShader);
+
+		/**--VENUSAUR--**/
+		glm::mat4 model3 = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f + varMov3X, 0.0f + varMov3Y, 5.0f - varMov3Z));//posicion
+		if (movVenusaur && pkAct3)
+		{
+			if (varMov3Z > 8.0f)
+			{
+				movVenusaur = false;
+			}
+			else if (varMov3Z < 4.0f)
+			{
+				varMov3Z += velocidad * deltaTime;
+				varMov3Y = pow((varMov3Z/6.0f), 2.0f);
+				alSourcePlay(source[2]);
+			}
+			else if (varMov3Z >= 4.0f)
+			{
+				varMov3Z += velocidad * deltaTime;
+				varMov3Y = pow(((varMov3Z - 8.0f) / 6.0f), 2.0f);
+			}
+			if (!movVenusaur)
+			{
+				varMov3X = 0.0f;
+				varMov3Y = 0.0f;
+				varMov3Z = 0.0f;
+			}
+		}
+		model3 = glm::rotate(model3, 180.0f * (3.14159f / 180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		model3 = glm::scale(model3, glm::vec3(0.1f, 0.1f, 0.1f)); //escala
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model3));
+		if (pkAct3)
+			modelo3.render(&lightingShader);
+
+		/**--CHARMANDER--**/
+		glm::mat4 model4 = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f + varMov4X, 0.0f + varMov4Y, -5.0f + varMov4Z));
+		if (movCharmander && pkAct4)
+		{
+			if (varMov4Z > 10.0f)
+			{
+				movCharmander = false;
+			}
+			else
+			{
+				varMov4Z += velocidad * deltaTime;
+				varMov4Y = sqrt(25.0f - pow((varMov4Z - 5.0f), 2.0f)) / 4.0f;
+				alSourcePlay(source[3]);
+			}
+			if (!movCharmander)
+			{
+				varMov4X = 0.0f;
+				varMov4Y = 0.0f;
+				varMov4Z = 0.0f;
+			}
+		}
+		model4 = glm::scale(model4, glm::vec3(0.15f, 0.15f, 0.15f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model4));
+		if (pkAct4)
+		{
+			modelo4.render(&lightingShader);
+		}
+
+		/**--CHRAMELEON--**/
+		glm::mat4 model5 = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f + varMov5X, 0.0f + varMov5Y, -5.0f + varMov5Z));
+		if (movCharmeleon && pkAct5)
+		{
+			if (varMov5Z > 9.0f)
+			{
+				movCharmeleon = false;
+			}
+			else
+			{
+				varMov5Z += velocidad * deltaTime;
+				varMov5Y = sqrt(20.25f - pow((varMov5Z - 4.5f), 2.0f)) / 3.0f;
+				alSourcePlay(source[4]);
+			}
+			if (!movCharmeleon)
+			{
+				varMov5X = 0.0f;
+				varMov5Y = 0.0f;
+				varMov5Z = 0.0f;
+			}
+		}
+		model5 = glm::rotate(model5, 90.0f * (3.14159f / 180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+		model5 = glm::scale(model5, glm::vec3(0.1f, 0.1f, 0.1f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model5));
+		if (pkAct5)
+		{
+			modelo5.render(&lightingShader);
+		}
+			
+
+		/**--CHARIZARD--**/
+		glm::mat4 model6 = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f + varMov6X, 0.0f + varMov6Y, -5.0f + varMov6Z));
+		if (movCharizard && pkAct6)
+		{
+			if (varMov6Z > 9.0f)
+			{
+				movCharizard = false;
+			}
+			else
+			{
+				varMov6Z += velocidad * deltaTime;
+				varMov6Y = sqrt(20.25f - pow((varMov6Z - 4.5f), 2.0f));
+				alSourcePlay(source[5]);
+			}
+			if (!movCharizard)
+			{
+				varMov6X = 0.0f;
+				varMov6Y = 0.0f;
+				varMov6Z = 0.0f;
+			}
+		}
+		model6 = glm::scale(model6, glm::vec3(0.1f, 0.1f, 0.1f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model6));
+		if (pkAct6)
+			modelo6.render(&lightingShader);
+
+		/**--PHANPY--**/
+		glm::mat4 model231 = glm::translate(glm::mat4(1.0f), glm::vec3(-6.5f + varMov231X, 0.1f + varMov231Y, 0.0f + varMov231Z));
+		model231 = glm::rotate(model231, varRot231X * (3.14159f / 180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+		model231 = glm::rotate(model231, varRot231Y * (3.14159f / 180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		model231 = glm::rotate(model231, varRot231Z * (3.14159f / 180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+			if (movPhanpy1)
+			{
+				if (varMov231Z > 5.0f)
+				{
+					movPhanpy1 = false;
+					movPhanpy3 = false;
+					movPhanpy2 = true;
+				}
+				else
+				{
+					varMov231Z += velocidad/5 * deltaTime;
+					varRot231X += 50.0f * velocidad * deltaTime;
+					varRot231Y = 0.0f;
+				}
+			}
+			if (movPhanpy2)
+			{
+				if (varMov231Z < -5.0f)
+				{
+					movPhanpy1 = true;
+					movPhanpy2 = false;
+					movPhanpy3 = false;
+				}
+				else
+				{
+					varMov231Z -= velocidad/5 * deltaTime;
+					varRot231X -= 50.0f * velocidad * deltaTime;
+					varRot231Y = 180.0f;
+				}
+			}
+			if (movPhanpy3)
+			{
+				varRot231X = 0.0f;
+			}
+			
+		model231 = glm::scale(model231, glm::vec3(0.1f, 0.1f, 0.1f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model231));
+		modelo231.render(&lightingShader);
+
+		switch (varPk)
+		{
+		case 1:
+			pkAct1 = true;
+			pkAct2 = false;
+			pkAct3 = false;
+			break;
+		case 2:
+			pkAct1 = false;
+			pkAct2 = true;
+			pkAct3 = false;
+			break;
+		case 3:
+			pkAct1 = false;
+			pkAct2 = false;
+			pkAct3 = true;
+			break;
+		case 4:
+			pkAct4 = true;
+			pkAct5 = false;
+			pkAct6 = false;
+			break;
+		case 5:
+			pkAct4 = false;
+			pkAct5 = true;
+			pkAct6 = false;
+			break;
+		case 6:
+			pkAct4 = false;
+			pkAct5 = false;
+			pkAct6 = true;
+			break;
+		}
+
+		glm::mat4 modelEstadio = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+		modelEstadio = glm::scale(modelEstadio, glm::vec3(1.0f, 1.0f, 1.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelEstadio));
+		modeloEstadio.render(&lightingShader);
+
+		lightingShader.turnOff();
+
+		// Render SBB
+		lampShader.turnOn();
+		modelLoc = lampShader.getUniformLocation("model");
+		viewLoc = lampShader.getUniformLocation("view");
+		projLoc = lampShader.getUniformLocation("projection");
+
+		// Pass the matrices to the shader
+		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+		/**--BULBASAUR--**/
+		if (pkAct1)
+		{
+			model1 = glm::translate(model1,
+				glm::vec3(sbb1.center.x, sbb1.center.y, sbb1.center.z));
+			model1 = glm::scale(model1,
+				glm::vec3(sbb1.ratio * 0.8, sbb1.ratio * 0.8, sbb1.ratio * 0.8)); //modifica esfera de colision
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model1));
+			//sp.render();
+		}
+
+
+		/**--IVYSAUR--**/
+		if (pkAct2)
+		{
+			model2 = glm::translate(model2,
+				glm::vec3(sbb2.center.x, sbb2.center.y, sbb2.center.z));
+			model2 = glm::rotate(model2,
+				-90.0f * (3.14159f / 180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+			model2 = glm::scale(model2,
+				glm::vec3(sbb2.ratio * 0.8, sbb2.ratio * 0.8, sbb2.ratio * 0.8)); //modifica esfera de colision
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model2));
+			//sp.render();
+		}
+
+
+		/**--VENUSAUR--**/
+		if (pkAct3)
+		{
+			model3 = glm::translate(model3,
+				glm::vec3(sbb3.center.x, sbb3.center.y, sbb3.center.z));
+			model3 = glm::scale(model3,
+				glm::vec3(sbb3.ratio * 0.8, sbb3.ratio * 0.8, sbb3.ratio * 0.8)); //modifica esfera de colision
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model3));
+			//sp.render();
+		}
+
+		/**--CHARMANDER--**/
+		if (pkAct4)
+		{
+			model4 = glm::translate(model4,
+				glm::vec3(sbb4.center.x, sbb4.center.y, sbb4.center.z));
+			model4 = glm::scale(model4,
+				glm::vec3(sbb4.ratio * 0.7, sbb4.ratio * 0.7, sbb4.ratio * 0.7));
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model4));
+			//sp.render();
+		}
+
+		/**--CHARMELEON--**/
+		if (pkAct5)
+		{
+			model5 = glm::translate(model5,
+				glm::vec3(sbb5.center.x, sbb5.center.y, sbb5.center.z));
+			model5 = glm::rotate(model5, 
+				90.0f * (3.14159f / 180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+			model5 = glm::scale(model5,
+				glm::vec3(sbb5.ratio * 0.8, sbb5.ratio * 0.8, sbb5.ratio * 0.8)); //modifica esfera de colision
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model5));
+			//sp.render();
+		}
+
+		/**--CHARIZARD--**/
+		if (pkAct6)
+		{
+			model6 = glm::translate(model6,
+				glm::vec3(sbb6.center.x, sbb6.center.y, sbb6.center.z));
+			model6 = glm::scale(model6,
+				glm::vec3(sbb6.ratio * 0.8, sbb6.ratio * 0.8, sbb6.ratio * 0.8));
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model6));
+			//sp.render();
+		}
+
+		/**--PHANPY--**/
+		model231 = glm::translate(model231,
+			glm::vec3(sbb231.center.x, sbb231.center.y, sbb231.center.z));
+		model231 = glm::rotate(model231,
+			90.0f * (3.14159f / 180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+		model231 = glm::scale(model231,
+			glm::vec3(sbb231.ratio * 0.8, sbb231.ratio * 0.8, sbb231.ratio * 0.8)); //modifica esfera de colision
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model231));
+		//sp.render();
+
+		lampShader.turnOff();
+
+		// Render the light sphere model
+		lampShader.turnOn();
+		// Create transformations
+		modelLoc = lampShader.getUniformLocation("model");
+		viewLoc = lampShader.getUniformLocation("view");
+		projLoc = lampShader.getUniformLocation("projection");
+		// Pass the matrices to the shader
+		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+		glm::mat4 model = glm::translate(glm::mat4(1.0f), lightPos);
+		model = glm::scale(model, glm::vec3(0.2, 0.2, 0.2));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		sp.render();
+		lampShader.turnOff();
+
+		// Render the rays
+		lampShader.turnOn();
+		if (inputManager.isGenerateRay()) {
+			std::cout << "Rayo generado:" << std::endl;
+			glm::vec4 viewport = glm::vec4(0.0f, 0.0f, screenWidth, screenHeight);
+			glm::vec3 o =
+				glm::unProject(
+					glm::vec3(
+						inputManager.getLastMousePos().x,
+						screenHeight
+						- inputManager.getLastMousePos().y,
+						0.0f), view, projection,
+					viewport);
+			glm::vec3 t =
+				glm::unProject(
+					glm::vec3(
+						inputManager.getLastMousePos().x,
+						screenHeight
+						- inputManager.getLastMousePos().y,
+						1.0f), view, projection,
+					viewport);
+
+			glm::vec3 c1 = glm::vec3(model1 * glm::vec4(0, 0, 0, 1));
+			glm::vec3 c2 = glm::vec3(model2 * glm::vec4(0, 0, 0, 1));
+			glm::vec3 c3 = glm::vec3(model3 * glm::vec4(0, 0, 0, 1));
+			glm::vec3 c4 = glm::vec3(model4 * glm::vec4(0, 0, 0, 1));
+			glm::vec3 c5 = glm::vec3(model5 * glm::vec4(0, 0, 0, 1));
+			glm::vec3 c6 = glm::vec3(model6 * glm::vec4(0, 0, 0, 1));
+			glm::vec3 c231 = glm::vec3(model231 * glm::vec4(0, 0, 0, 1));
+			glm::vec3 dir = glm::normalize(t - o);
+			float t1;
+
+			if (pkAct1)
+			{
+				if (raySphereIntersect(o, t, dir, c1, sbb1.ratio * 0.09f, t1)) {
+					std::cout << "Bulbasaur" << std::endl;
+				}	
+			}
+			if (pkAct2)
+			{
+				if (raySphereIntersect(o, t, dir, c2, sbb2.ratio * 0.09f, t1)) {
+					std::cout << "Ivysaur" << std::endl;
+				}
+					
+			}
+			if (pkAct3)
+			{
+				if (raySphereIntersect(o, t, dir, c3, sbb3.ratio * 0.09f, t1))
+					std::cout << "Venusaur" << std::endl;
+			}
+			if (pkAct4)
+			{
+				if (raySphereIntersect(o, t, dir, c4, sbb4.ratio * 0.09f, t1))
+					std::cout << "Charmander" << std::endl;
+			}
+			if (pkAct5)
+			{
+				if (raySphereIntersect(o, t, dir, c5, sbb5.ratio * 0.09f, t1))
+					std::cout << "Charmeleon" << std::endl;
+			}
+			if (pkAct6)
+			{
+				if (raySphereIntersect(o, t, dir, c6, sbb6.ratio * 0.09f, t1))
+					std::cout << "Charizard" << std::endl;
+			}
+			if (raySphereIntersect(o, t, dir, c231, sbb231.ratio * 0.09f, t1))
+			{
+				std::cout << "Phanpy" << std::endl;
+				movPhanpy3 = !movPhanpy3;
+				movPhanpy1 = !movPhanpy1;
+			}
+				
+			
+
+			inputManager.setGenerateRay(false);
+
+			GLuint VAO;
+
+			VertexColor vertex[2] = { { o, glm::vec3(0.0) },
+			{ t, glm::vec3(0.0) } };
+			glGenVertexArrays(1, &VAO);
+			glGenBuffers(1, &VBO);
+			glBindVertexArray(VAO);
+			glBindBuffer(GL_ARRAY_BUFFER, VBO);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(vertex), vertex,
+				GL_STATIC_DRAW);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex[0]),
+				(GLvoid*)0);
+			glEnableVertexAttribArray(0);
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			glBindVertexArray(0);
+
+			rays.push_back(VAO);
+		}
+
+		// For test collision sphere vs sphere
+		SBB s1, s2, s3, s4, s5, s6;
+		s1.center = glm::vec3(model1 * glm::vec4(0, 0, 0, 1));
+		s1.ratio = sbb1.ratio * 0.1f;
+		s2.center = glm::vec3(model2 * glm::vec4(0, 0, 0, 1));
+		s2.ratio = sbb2.ratio * 0.15f;
+		s3.center = glm::vec3(model3 * glm::vec4(0, 0, 0, 1));
+		s3.ratio = sbb3.ratio * 0.1f;
+		s4.center = glm::vec3(model4 * glm::vec4(0, 0, 0, 1));
+		s4.ratio = sbb4.ratio * 0.15f;
+		s5.center = glm::vec3(model5 * glm::vec4(0, 0, 0, 1));
+		s5.ratio = sbb5.ratio * 0.1f;
+		s6.center = glm::vec3(model6 * glm::vec4(0, 0, 0, 1));
+		s6.ratio = sbb6.ratio * 0.1f;
+
+		//**--COLISIONES--**//
+		//1
+		if (pkAct1 && pkAct4) {
+
+			if (testSphereSphereIntersection(s1, s4)) {
+				colisionan = 1;
+				if (ataque == 1) {
+					recibe = 4;
+				}
+				else
+					recibe = 1;
+				//funcionTextoColision(paraZ, parav, 0, colisionan, "Model collision: BULBASAUR v CHARMANDER ");
+				funcionVida(paraZ, parav, 0, colisionan, ataque, vidaBulbasaur, recibe, vidaCharmander, "Embestida");
+				paraZ = 0;
+				parav = 0;
+			}
+			else
+				colisionan = 0;
+		}
+		//2
+		if (pkAct1 && pkAct5) {
+			if (testSphereSphereIntersection(s1, s5)) {
+				colisionan = 1;
+				if (ataque == 1) {
+					recibe = 5;
+				}
+				else
+					recibe = 1;
+
+				//funcionTextoColision(paraZ, parab, 0, colisionan, "Model collision : BULBASAUR v CHARMELEON ");
+				funcionVida(paraZ, parav, 0, colisionan, ataque, vidaBulbasaur, recibe, vidaCharmeleon, "Embestida");
+				paraZ = 0;
+				parab = 0;
+			}
+			else
+				colisionan = 0;
+		}
+		//3
+		if (pkAct1 && pkAct6) {
+
+			if (testSphereSphereIntersection(s1, s6)) {
+				colisionan = 1;
+				if (ataque == 1) {
+					recibe = 6;
+				}
+				else
+					recibe = 1;
+				//funcionTextoColision(paraZ, paran, 0, colisionan, "Model collision: BULBASAUR v CHARIZARD ");
+				funcionVida(paraZ, paran, 0, colisionan, ataque, vidaBulbasaur, recibe, vidaCharizard, "Embestida");
+				paraZ = 0;
+				paran = 0;
+
+			}
+			else
+				colisionan = 0;
+		}
+		//4
+		if (pkAct2 && pkAct4) {
+			if (testSphereSphereIntersection(s2, s4)) {
+				colisionan = 1;
+				if (ataque == 2) {
+					recibe = 4;
+				}
+				else
+					recibe = 2;
+				//funcionTextoColision(parax, parav, 0, colisionan, "Model collision: IVYSAUR v CHARMANDER ");
+				funcionVida(parax, parav, 0, colisionan, ataque, vidaIvysaur, recibe, vidaCharmander, "Embestida");
+				parax = 0;
+				parav = 0;
+			}
+			else
+				colisionan = 0;
+		}
+		//5
+		if (pkAct2 && pkAct5) {
+			if (testSphereSphereIntersection(s2, s5)) {
+				colisionan = 1;
+				if (ataque == 2) {
+					recibe = 5;
+				}
+				else
+					recibe = 2;
+
+				//funcionTextoColision(parax, parab, 0, colisionan, "Model collision: IVYSAUR v CHARMELEON ");
+				funcionVida(parax, parab, 0, colisionan, ataque, vidaIvysaur, recibe, vidaCharmeleon, "Embestida");
+				parax = 0;
+				parab = 0;
+			}
+			else
+				colisionan = 0;
+		}
+		//6
+		if (pkAct2 && pkAct6) {
+
+			if (testSphereSphereIntersection(s2, s6)) {
+				colisionan = 1;
+				if (ataque == 2) {
+					recibe = 6;
+				}
+				else
+					recibe = 2;
+				//funcionTextoColision(parax, paran, 0, colisionan, "Model collision: IVYSAUR v CHARIZARD ");
+				funcionVida(parax, paran, 0, colisionan, ataque, vidaIvysaur, recibe, vidaCharizard, "Embestida");
+				parax = 0;
+				paran = 0;
+
+			}
+			else
+				colisionan = 0;
+		}
+		//7
+		if (pkAct3 && pkAct4) {
+
+			if (testSphereSphereIntersection(s3, s4)) {
+				colisionan = 1;
+				if (ataque == 3) {
+					recibe = 4;
+				}
+				else
+					recibe = 3;
+				//funcionTextoColision(parac, parav, 0, colisionan, "Model collision: VENUSAUR v CHARMANDER ");
+				funcionVida(parac, parav, 0, colisionan, ataque, vidaVenusaur, recibe, vidaCharmander, "Embestida");
+				parac = 0;
+				parav = 0;
+			}
+			else
+				colisionan = 0;
+		}
+		//8
+		if (pkAct3 && pkAct5) {
+			if (testSphereSphereIntersection(s3, s5)) {
+				colisionan = 1;
+				if (ataque == 3) {
+					recibe = 5;
+				}
+				else
+					recibe = 3;
+				//funcionTextoColision(parac, parab, 0, colisionan, "Model collision: VENUSAUR v CHARMELEON ");
+				funcionVida(parac, parab, 0, colisionan, ataque, vidaVenusaur, recibe, vidaCharmeleon, "Embestida");
+				parac = 0;
+				parab = 0;
+			}
+			else
+				colisionan = 0;
+		}
+		//9
+		if (pkAct3 && pkAct6) {
+
+			if (testSphereSphereIntersection(s3, s6)) {
+				colisionan = 1;
+				if (ataque == 3) {
+					recibe = 6;
+					//funcionVida(parac, paran, 0, colisionan, ataque, vidaCharizard, recibe, vidaVenusaur, "Embestida");
+				}
+				else {
+					recibe = 3;
+					//funcionVida(parac, paran, 0, colisionan, ataque, vidaVenusaur, recibe, vidaCharizard, "Embestida");
+				}
+				//funcionTextoColision(parac, paran, 0, colisionan, "Model collision: VENUSAUR v CHARIZARD ");
+				funcionVida(parac, paran, 0, colisionan, ataque, vidaVenusaur, recibe, vidaCharizard, "Embestida");
+				parac = 0;
+				paran = 0;
+			}
+			else
+				colisionan = 0;
+		}
+
+		modelLoc = lampShader.getUniformLocation("model");
+		viewLoc = lampShader.getUniformLocation("view");
+		projLoc = lampShader.getUniformLocation("projection");
+		
+		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+		glm::mat4 modelLine = glm::mat4(1.0f);
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelLine));
+
+		for (int i = 0; i < rays.size(); i++) {
+			glBindVertexArray(rays[i]);
+			//glDrawArrays(GL_LINES, 0, 2);
+		}
+
+		lampShader.turnOff();
+
+		//Particulas
+		if (hojasNavaja) {
+			particlesShader.turnOn();
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			// Set the point size
+			glPointSize(15.0f);
+			textureParticle.bind(GL_TEXTURE0);
+
+			modelLoc = particlesShader.getUniformLocation("model");
+			viewLoc = particlesShader.getUniformLocation("view");
+			projLoc = particlesShader.getUniformLocation("projection");
+			// Pass the matrices to the shader
+			glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+			glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+			glUniform1f(particlesShader.getUniformLocation("Time"), float(glfwGetTime()));
+			glUniform1f(particlesShader.getUniformLocation("ParticleTex"), 1);
+			glUniform1f(particlesShader.getUniformLocation("ParticleLifetime"), 30.0f * deltaTime);
+			glUniform3fv(particlesShader.getUniformLocation("Gravity"), 1.0f,
+				glm::value_ptr(glm::vec3(0.0f, 0.0f, -1.0f)));
+
+			model = glm::mat4(1.0f);
+			model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f)); //escala
+			model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 5.0f));
+			//model = glm::rotate(glm::mat4(1.0f), 180.0f * (3.14159f / 180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
+			glBindVertexArray(VAOParticles);
+			glDrawArrays(GL_POINTS, 0, nParticles);
+			glDisable(GL_BLEND);
+
+			textureParticle.load();
+			particlesShader.turnOff();
+		}
+
+		if (lanzaLlamas) {
+			particlesShader.turnOn();
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			// Set the point size
+			glPointSize(15.0f);
+			textureParticle2.bind(GL_TEXTURE0);
+
+			modelLoc = particlesShader.getUniformLocation("model");
+			viewLoc = particlesShader.getUniformLocation("view");
+			projLoc = particlesShader.getUniformLocation("projection");
+			// Pass the matrices to the shader
+			glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+			glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+			glUniform1f(particlesShader.getUniformLocation("Time"), float(glfwGetTime()));
+			glUniform1f(particlesShader.getUniformLocation("ParticleTex"), 1);
+			glUniform1f(particlesShader.getUniformLocation("ParticleLifetime"), 30.0f * deltaTime);
+			glUniform3fv(particlesShader.getUniformLocation("Gravity"), 1.0f,
+				glm::value_ptr(glm::vec3(0.0f, 0.0f, -1.0f)));
+
+			model = glm::mat4(1.0f);
+			model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 5.0f));
+			model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.5f)); //escale
+			model = glm::rotate(glm::mat4(1.0f), 180.0f * (3.14159f / 180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
+			glBindVertexArray(VAOParticles);
+			glDrawArrays(GL_POINTS, 0, nParticles);
+			glDisable(GL_BLEND);
+
+			textureParticle2.load();
+			particlesShader.turnOff();
+		}
+
+		glfwSwapBuffers(window);
+
+		source0Pos[0] = model[3].x;
+		source0Pos[1] = model[3].y;
+		source0Pos[2] = model[3].z;
+		alSourcefv(source[0], AL_POSITION, source0Pos);
+		alSourcefv(source[1], AL_POSITION, source1Pos);
+		alSourcefv(source[2], AL_POSITION, source2Pos);
+
+		listenerPos[0] = inputManager.getCameraFPS()->Position.x;
+		listenerPos[1] = inputManager.getCameraFPS()->Position.y;
+		listenerPos[2] = inputManager.getCameraFPS()->Position.z;
+		alListenerfv(AL_POSITION, listenerPos);
+
+		listenerOri[0] = inputManager.getCameraFPS()->Front.x;
+		listenerOri[1] = inputManager.getCameraFPS()->Front.y;
+		listenerOri[2] = inputManager.getCameraFPS()->Front.z;
+		listenerOri[3] = inputManager.getCameraFPS()->Up.x;
+		listenerOri[4] = inputManager.getCameraFPS()->Up.y;
+		listenerOri[5] = inputManager.getCameraFPS()->Up.z;
+		alListenerfv(AL_ORIENTATION, listenerOri);
+	}
+}
+
+int main(int argc, char ** argv) {
+	init(900, 800, "Proyecto Final 2019-2", false);
+	applicationLoop();
+	destroy();
+	return 1;
+}
+
